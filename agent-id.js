@@ -10,6 +10,9 @@
 // Usage:
 //   node agent-id.js jackdefi            -> prints agentId, registry, tokenId
 //   node agent-id.js jackdefi 0xWALLET   -> also checks ownership
+//   node agent-id.js jackdefi 0xWALLET <tokenId>  -> ownership via a known tokenId
+// NOTE: the registry does NOT expose tokenIdOf() — pass the tokenId directly
+// when you know it (jackdefi.ai = 57484441254250005658950287098154019031945410633065887588232514791239975223102).
 // Requires: ethers (npm i ethers). Public BSC RPC, no key needed.
 
 const { ethers } = require("ethers");
@@ -27,9 +30,9 @@ function agentIdBytes32(handle) {
 }
 
 async function main() {
-    const [handle, wallet] = process.argv.slice(2);
+    const [handle, wallet, tokenIdArg] = process.argv.slice(2);
     if (!handle) {
-        console.log("Usage: node agent-id.js <handle> [walletAddress]");
+        console.log("Usage: node agent-id.js <handle> [walletAddress] [tokenId]");
         console.log("Example: node agent-id.js jackdefi 0x3Bc96b2528f686F27b04897bD819bC10D8981B1b");
         process.exit(1);
     }
@@ -40,12 +43,17 @@ async function main() {
 
     const provider = new ethers.JsonRpcProvider(RPC);
     const reg = new ethers.Contract(REGISTRY, REGISTRY_ABI, provider);
-    let tokenId;
-    try {
-        tokenId = await reg.tokenIdOf(name);
-        console.log(`Agent ID tokenId: ${tokenId.toString()}`);
-    } catch (e) {
-        console.log("tokenIdOf not available on this registry — use ownerOf with a known tokenId.");
+    // tokenIdOf() is not on this registry — prefer an explicitly passed tokenId.
+    let tokenId = tokenIdArg !== undefined ? BigInt(tokenIdArg) : undefined;
+    if (tokenId !== undefined) {
+        console.log(`Agent ID tokenId: ${tokenId.toString()} (passed in)`);
+    } else {
+        try {
+            tokenId = await reg.tokenIdOf(name);
+            console.log(`Agent ID tokenId: ${tokenId.toString()}`);
+        } catch (e) {
+            console.log("tokenIdOf not available on this registry — pass the tokenId as a 3rd argument to check ownership.");
+        }
     }
     if (wallet && tokenId !== undefined) {
         const owner = await reg.ownerOf(tokenId);
