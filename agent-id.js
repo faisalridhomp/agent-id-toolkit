@@ -36,6 +36,14 @@ async function main() {
         console.log("Example: node agent-id.js jackdefi 0x3Bc96b2528f686F27b04897bD819bC10D8981B1b");
         process.exit(1);
     }
+    if (wallet && !ethers.isAddress(wallet)) {
+        console.error(`ERROR: "${wallet}" is not a valid EVM wallet address (0x + 40 hex chars).`);
+        process.exit(1);
+    }
+    if (tokenIdArg !== undefined && !/^\d+$/.test(tokenIdArg)) {
+        console.error(`ERROR: tokenId "${tokenIdArg}" must be a number, not "${tokenIdArg}".`);
+        process.exit(1);
+    }
     const name = handle.replace(/\.ai$/i, "");
     console.log(`handle: ${name}.ai`);
     console.log(`agentId (bytes32): ${agentIdBytes32(name)}`);
